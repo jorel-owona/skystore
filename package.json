@@ -1,0 +1,82 @@
+{
+  "name": "skystore",
+  "private": true,
+  "version": "1.1.1",
+  "description": "Système de caisse et de gestion pour SKYSTORE",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "electron:start": "electron .",
+    "electron:build": "vite build && electron-builder"
+  },
+  "build": {
+    "appId": "com.skystore.pos",
+    "productName": "SKYSTORE POS",
+    "copyright": "Copyright © 2026 SKYSTORE",
+    "icon": "asset/logoSkyStore.ico",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "jorel-owona",
+        "repo": "skystore"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "asset/logoSkyStore.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "asset/logoSkyStore.ico",
+      "uninstallerIcon": "asset/logoSkyStore.ico",
+      "installerHeaderIcon": "asset/logoSkyStore.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SKYSTORE POS"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "asset/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "asset/",
+        "to": "asset/"
+      }
+    ]
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.10.0",
+    "clsx": "^2.1.1",
+    "electron-updater": "^6.8.3",
+    "exceljs": "^4.4.0",
+    "lucide-react": "^0.400.0",
+    "react": "^18.3.1",
+    "react-barcode": "^1.6.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.24.0",
+    "tailwind-merge": "^2.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.19",
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react": "^7.34.2",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "eslint-plugin-react-refresh": "^0.4.7",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.4",
+    "vite": "^5.3.1"
+  }
+}
