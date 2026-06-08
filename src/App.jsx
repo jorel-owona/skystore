@@ -16,6 +16,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('caisse');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [clients, setClients] = useState([]);
+  const [activeSession, setActiveSession] = useState(null);
 
   const fetchClients = async () => {
     try {
@@ -26,8 +27,26 @@ export default function App() {
     }
   };
 
+  const checkActiveSession = async () => {
+    try {
+      const data = await query('SELECT * FROM sessions_caisses WHERE date_fermeture IS NULL ORDER BY id DESC LIMIT 1');
+      if (data && data.length > 0) {
+        setActiveSession({
+          id: data[0].id,
+          dateOuverture: data[0].date_ouverture,
+          fondCaisseInitial: data[0].fond_caisse_initial
+        });
+      } else {
+        setActiveSession(null);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchClients();
+    checkActiveSession();
   }, []);
 
   useEffect(() => {
@@ -57,16 +76,16 @@ export default function App() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'caisse': return <Caisse clients={clients} refreshClients={fetchClients} />;
-      case 'vente': return <Vente />;
+      case 'caisse': return <Caisse clients={clients} refreshClients={fetchClients} activeSession={activeSession} />;
+      case 'vente': return <Vente activeSession={activeSession} refreshSession={checkActiveSession} />;
       case 'journal': return <Journal />;
       case 'inventaire': return <Inventaire />;
       case 'depenses': return <Depenses />;
-      case 'factures': return <Factures />;
+      case 'factures': return <Factures activeSession={activeSession} />;
       case 'produits': return <Produits />;
       case 'services': return <Services />;
       case 'clients': return <Clients clients={clients} refreshClients={fetchClients} />;
-      default: return <Caisse clients={clients} refreshClients={fetchClients} />;
+      default: return <Caisse clients={clients} refreshClients={fetchClients} activeSession={activeSession} />;
     }
   };
 
@@ -135,10 +154,17 @@ export default function App() {
               >
                 {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
               </button>
-              <div className="px-4 py-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-full text-sm font-semibold flex items-center space-x-2 shadow-sm">
-                 <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                 <span>Caisse Ouverte</span>
-              </div>
+              {activeSession ? (
+                <div className="px-4 py-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-full text-sm font-semibold flex items-center space-x-2 shadow-sm">
+                   <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                   <span>Caisse Ouverte</span>
+                </div>
+              ) : (
+                <div className="px-4 py-2 bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-full text-sm font-semibold flex items-center space-x-2 shadow-sm">
+                   <div className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></div>
+                   <span>Caisse Fermée</span>
+                </div>
+              )}
            </div>
         </header>
 

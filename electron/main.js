@@ -46,7 +46,10 @@ function createWindow() {
 
   mainWindow.once('ready-to-show', () => {
     // Lancer la vérification des mises à jour dès que l'application démarre
-    autoUpdater.checkForUpdatesAndNotify();
+    if (app.isPackaged) {
+      autoUpdater.logger = console;
+      autoUpdater.checkForUpdatesAndNotify();
+    }
 
     setTimeout(() => {
       if (splashWindow && !splashWindow.isDestroyed()) {
@@ -95,22 +98,34 @@ ipcMain.handle('db:query', async (event, sql, params = []) => {
   }
 });
 
-// --- Impression silencieuse (A4) ---
-ipcMain.handle('print:silent', async (event) => {
+// --- Impression silencieuse (avec imprimante cible facultative) ---
+ipcMain.handle('print:silent', async (event, printerName) => {
   const win = mainWindow;
   if (!win) return Promise.reject('Fenêtre principale non trouvée');
 
+  const options = {
+    silent: true,
+    printBackground: true,
+    margins: { marginType: 'none' }
+  };
+
+  if (printerName) {
+    options.deviceName = printerName;
+  }
+
   return new Promise((resolve, reject) => {
-    win.webContents.print({
-      silent: true,
-      printBackground: true,
-      margins: { marginType: 'custom', top: 0, bottom: 0, left: 0, right: 0 },
-      pageSize: 'A4'
-    }, (success, failureReason) => {
+    win.webContents.print(options, (success, failureReason) => {
       if (!success) reject(failureReason);
       else resolve('Impression réussie');
     });
   });
+});
+
+// --- Récupérer la liste des imprimantes système ---
+ipcMain.handle('print:get-printers', async () => {
+  const win = mainWindow;
+  if (!win) return [];
+  return await win.webContents.getPrintersAsync();
 });
 
 // --- Impression Ticket de caisse brute (ESC/POS via PowerShell) ---
@@ -220,7 +235,35 @@ ipcMain.handle('file:saveProductImage', (event, sourcePath, fileName) => {
   return destPath;
 });
 
+// --- Lecture des Images locales en Base64 ---
+ipcMain.handle('file:readImage', async (event, filePath) => {
+  try {
+    if (!filePath || !fs.existsSync(filePath)) return null;
+    const data = fs.readFileSync(filePath);
+    const ext = path.extname(filePath).substring(1);
+    return `data:image/${ext || 'png'};base64,${data.toString('base64')}`;
+  } catch (error) {
+    console.error("Erreur lecture image:", error);
+    return null;
+  }
+});
+
 // --- Gestion des événements de l'Auto-Updater ---
+autoUpdater.on('checking-for-update', () => {
+  console.log('Vérification des mises à jour en cours...');
+});
+autoUpdater.on('update-available', (info) => {
+  console.log('Mise à jour disponible:', info.version);
+});
+autoUpdater.on('update-not-available', (info) => {
+  console.log('Aucune mise à jour disponible.');
+});
+autoUpdater.on('error', (err) => {
+  console.error('Erreur lors de la vérification de mise à jour:', err);
+});
+autoUpdater.on('download-progress', (progressObj) => {
+  console.log(`Téléchargement: ${progressObj.percent.toFixed(2)}%`);
+});
 autoUpdater.on('update-downloaded', (info) => {
   dialog.showMessageBox({
     type: 'info',

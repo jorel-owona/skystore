@@ -45,8 +45,11 @@ function initDB(dbPath) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       client_id INTEGER,
       date_vente TEXT NOT NULL,
+      moyen_paiement TEXT CHECK(moyen_paiement IN ('Cash', 'Orange Money', 'Mobile Money', 'Carte')) NOT NULL DEFAULT 'Cash',
+      transaction_id TEXT,
+      statut_paiement TEXT CHECK(statut_paiement IN ('Payé', 'Impayé')) NOT NULL DEFAULT 'Payé',
       total_facture REAL NOT NULL,
-      statut_facture TEXT CHECK(statut_facture IN ('Valide', 'Annule')) NOT NULL DEFAULT 'Valide',
+      statut_facture TEXT CHECK(statut_facture IN ('Valide', 'Supprimée', 'Annule')) NOT NULL DEFAULT 'Valide',
       FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE SET NULL
   )`);
 
@@ -92,6 +95,17 @@ function initDB(dbPath) {
   } catch (err) {
     // Si la colonne existe déjà, better-sqlite3 lèvera une erreur, on l'ignore proprement
   }
+
+  // Migrations pour la table ventes
+  try {
+    db.exec(`ALTER TABLE ventes ADD COLUMN moyen_paiement TEXT CHECK(moyen_paiement IN ('Cash', 'Orange Money', 'Mobile Money', 'Carte')) NOT NULL DEFAULT 'Cash'`);
+  } catch (err) {}
+  try {
+    db.exec(`ALTER TABLE ventes ADD COLUMN transaction_id TEXT`);
+  } catch (err) {}
+  try {
+    db.exec(`ALTER TABLE ventes ADD COLUMN statut_paiement TEXT CHECK(statut_paiement IN ('Payé', 'Impayé')) NOT NULL DEFAULT 'Payé'`);
+  } catch (err) {}
 
   return db;
 }

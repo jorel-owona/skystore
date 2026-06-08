@@ -1,7 +1,7 @@
 {
   "name": "skystore",
   "private": true,
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Système de caisse et de gestion pour SKYSTORE",
   "main": "electron/main.js",
   "scripts": {
@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "electron:start": "electron .",
-    "electron:build": "vite build && electron-builder"
+    "electron:build": "vite build && electron-builder --publish always"
   },
   "build": {
     "appId": "com.skystore.pos",
@@ -21,7 +21,8 @@
       {
         "provider": "github",
         "owner": "jorel-owona",
-        "repo": "skystore"
+        "repo": "skystore",
+        "releaseType": "release"
       }
     ],
     "win": {
