@@ -8,93 +8,77 @@ const getCtx = () => {
   return audioCtx;
 };
 
-export const playBeep = () => {
+// Helper function to create, connect, play and properly disconnect nodes
+const playTone = (freq, type, duration, delay = 0, volume = 0.2) => {
   try {
     const ctx = getCtx();
+    
+    // Resume context if suspended (browser security policy)
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
+
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.frequency.value = 880; osc.type = 'sine';
-    gain.gain.setValueAtTime(0.25, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
-    osc.start(); osc.stop(ctx.currentTime + 0.12);
-  } catch {}
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.frequency.value = freq;
+    osc.type = type;
+    
+    const startTime = ctx.currentTime + delay;
+    const endTime = startTime + duration;
+    
+    gain.gain.setValueAtTime(volume, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, endTime);
+    
+    osc.start(startTime);
+    osc.stop(endTime);
+    
+    // Clean up connections when done playing to prevent memory leaks
+    osc.onended = () => {
+      try {
+        osc.disconnect();
+        gain.disconnect();
+      } catch (e) {
+        console.warn('[Audio Clean] Failed to disconnect nodes:', e);
+      }
+    };
+  } catch (err) {
+    console.error('[Audio Error]', err);
+  }
+};
+
+export const playBeep = () => {
+  playTone(880, 'sine', 0.12, 0, 0.25);
 };
 
 export const playSuccess = () => {
-  try {
-    const ctx = getCtx();
-    [523, 659, 784].forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.frequency.value = freq; osc.type = 'sine';
-      gain.gain.setValueAtTime(0.22, ctx.currentTime + i * 0.1);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.1 + 0.22);
-      osc.start(ctx.currentTime + i * 0.1);
-      osc.stop(ctx.currentTime + i * 0.1 + 0.22);
-    });
-  } catch {}
+  [523, 659, 784].forEach((freq, i) => {
+    playTone(freq, 'sine', 0.22, i * 0.1, 0.22);
+  });
 };
 
 export const playError = () => {
-  try {
-    const ctx = getCtx();
-    [330, 260].forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.frequency.value = freq; osc.type = 'square';
-      gain.gain.setValueAtTime(0.15, ctx.currentTime + i * 0.15);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.2);
-      osc.start(ctx.currentTime + i * 0.15);
-      osc.stop(ctx.currentTime + i * 0.15 + 0.2);
-    });
-  } catch {}
+  [330, 260].forEach((freq, i) => {
+    playTone(freq, 'square', 0.2, i * 0.15, 0.15);
+  });
 };
 
 export const playClick = () => {
-  try {
-    const ctx = getCtx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.frequency.value = 600; osc.type = 'sine';
-    gain.gain.setValueAtTime(0.12, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
-    osc.start(); osc.stop(ctx.currentTime + 0.04);
-  } catch {}
+  playTone(600, 'sine', 0.04, 0, 0.12);
 };
 
 export const playDelete = () => {
-  try {
-    const ctx = getCtx();
-    [440, 330, 220].forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.frequency.value = freq; osc.type = 'triangle';
-      gain.gain.setValueAtTime(0.18, ctx.currentTime + i * 0.08);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.08 + 0.12);
-      osc.start(ctx.currentTime + i * 0.08);
-      osc.stop(ctx.currentTime + i * 0.08 + 0.12);
-    });
-  } catch {}
+  [440, 330, 220].forEach((freq, i) => {
+    playTone(freq, 'triangle', 0.12, i * 0.08, 0.18);
+  });
 };
 
 export const playCashRegister = () => {
-  try {
-    const ctx = getCtx();
-    // Cha-ching sound
-    [1200, 1500, 1800].forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.frequency.value = freq; osc.type = 'sine';
-      gain.gain.setValueAtTime(0.2, ctx.currentTime + i * 0.06);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.06 + 0.15);
-      osc.start(ctx.currentTime + i * 0.06);
-      osc.stop(ctx.currentTime + i * 0.06 + 0.15);
-    });
-  } catch {}
+  // Cha-ching sound
+  [1200, 1500, 1800].forEach((freq, i) => {
+    playTone(freq, 'sine', 0.15, i * 0.06, 0.2);
+  });
 };

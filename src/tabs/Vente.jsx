@@ -138,11 +138,24 @@ export default function Vente({ activeSession, refreshSession }) {
 
       // Imprimer le rapport Z
       setTimeout(async () => {
-        if (window.api && window.api.printSilent) {
+        const activePrinter = selectedPrinter || 'XP-80C';
+        if (window.api && window.api.printTicketRaw) {
           try {
-            await window.api.printSilent(selectedPrinter || undefined);
+            const printData = {
+              isZReport: true,
+              shopName: 'SKYSTORE',
+              date: nowStr,
+              dateOuverture: activeSession.dateOuverture,
+              dateFermeture: nowStr,
+              fondCaisseInitial: FCFA(activeSession.fondCaisseInitial),
+              recetteAttendue: FCFA(expectedCash),
+              recetteReelle: FCFA(realCash),
+              ecart: FCFA(realCash - expectedCash),
+              recetteDuJour: FCFA(recetteDuJour)
+            };
+            await window.api.printTicketRaw(printData, activePrinter);
           } catch (err) {
-            console.error("Échec impression Rapport Z, fallback standard:", err);
+            console.error("Échec impression Rapport Z brute, fallback standard:", err);
             window.print();
           }
         } else {

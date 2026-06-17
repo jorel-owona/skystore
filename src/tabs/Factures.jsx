@@ -336,12 +336,27 @@ export default function Factures({ activeSession }) {
                 <button
                   onClick={async () => {
                     playClick();
-                    const selectedPrinter = localStorage.getItem('selected_printer') || '';
-                    if (window.api && window.api.printSilent) {
+                    const selectedPrinter = localStorage.getItem('selected_printer') || 'XP-80C';
+                    
+                    if (window.api && window.api.printTicketRaw) {
                       try {
-                        await window.api.printSilent(selectedPrinter || undefined);
+                        const printData = {
+                          shopName: 'SKYSTORE',
+                          date: previewFac.date_vente,
+                          invoiceId: 'INV-' + previewFac.id,
+                          cashier: 'Admin',
+                          clientName: previewFac.client_nom || 'Client En Passant',
+                          paymentMethod: previewFac.moyen_paiement,
+                          cart: previewArticles.map(a => ({
+                            nom: a.nom || 'Article',
+                            qte: a.quantite,
+                            prix_negocie: a.prix_unitaire_vendu
+                          })),
+                          total: previewFac.total_facture
+                        };
+                        await window.api.printTicketRaw(printData, selectedPrinter);
                       } catch (err) {
-                        console.error("Échec impression ticket, fallback standard :", err);
+                        console.error("Échec impression ticket brute, fallback standard :", err);
                         window.print();
                       }
                     } else {

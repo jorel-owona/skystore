@@ -1,7 +1,7 @@
 {
   "name": "skystore",
   "private": true,
-  "version": "1.1.2",
+  "version": "1.1.5",
   "description": "Système de caisse et de gestion pour SKYSTORE",
   "main": "electron/main.js",
   "scripts": {
@@ -10,7 +10,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "electron:start": "electron .",
-    "electron:build": "vite build && electron-builder --publish always"
+    "electron:build": "vite build && electron-builder --publish never",
+    "electron:publish": "set GH_TOKEN=ghp_LYK4aP4rN4X3H4KI46XzAfyxHi6uuX2dM8pB && vite build && electron-builder --publish always",
+    "make-icon": "node scripts/make-ico.js"
   },
   "build": {
     "appId": "com.skystore.pos",
@@ -26,7 +28,15 @@
       }
     ],
     "win": {
-      "target": "nsis",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        }
+      ],
       "icon": "asset/logoSkyStore.ico"
     },
     "nsis": {
@@ -37,7 +47,15 @@
       "installerHeaderIcon": "asset/logoSkyStore.ico",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "SKYSTORE POS"
+      "shortcutName": "SKYSTORE POS",
+      "installerLanguages": [
+        "fr-FR",
+        "en-US",
+        "ar",
+        "pt-BR",
+        "es-ES"
+      ],
+      "multiLanguageInstaller": true
     },
     "files": [
       "dist/**/*",

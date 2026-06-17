@@ -225,14 +225,25 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
 
       playCashRegister();
 
-      // Impression silencieuse sur l'imprimante thermique configurée (sauvegardée dans localStorage)
+      // Impression directe brute (ESC/POS) sur l'imprimante configurée (sauvegardée dans localStorage)
       setTimeout(async () => {
-        const selectedPrinter = localStorage.getItem('selected_printer') || '';
-        if (window.api && window.api.printSilent) {
+        const selectedPrinter = localStorage.getItem('selected_printer') || 'XP-80C';
+        
+        if (window.api && window.api.printTicketRaw) {
           try {
-            await window.api.printSilent(selectedPrinter || undefined);
+            const printData = {
+              shopName: shopName || 'SKYSTORE',
+              date: now,
+              invoiceId: invoiceId,
+              cashier: 'Admin',
+              clientName: selectedClientInfo.nom,
+              paymentMethod: paymentMethod,
+              cart: cart,
+              total: total
+            };
+            await window.api.printTicketRaw(printData, selectedPrinter);
           } catch (printErr) {
-            console.error("Échec impression ticket, fallback standard :", printErr);
+            console.error("Échec impression ticket brute, fallback standard :", printErr);
             window.print();
           }
         } else {
