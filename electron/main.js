@@ -571,7 +571,7 @@ function imprimerTicketRaw(data, printerName = 'XP-80C') {
       if (Array.isArray(data.cart)) {
         data.cart.forEach(item => {
           const totalItemVal = item.prix_negocie * item.qte;
-          const totalItemStr = new Intl.NumberFormat('fr-FR').format(Math.round(totalItemVal)) + ' FCFA';
+          const totalItemStr = Math.round(totalItemVal).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' FCFA';
           const line = formatProductLine(item.qte, item.nom, totalItemStr);
           bufferChunks.push(Buffer.from(line, 'ascii'));
         });
@@ -581,7 +581,7 @@ function imprimerTicketRaw(data, printerName = 'XP-80C') {
 
       // Total
       const totalVal = typeof data.total === 'number' ? data.total : 0;
-      const totalStr = new Intl.NumberFormat('fr-FR').format(Math.round(totalVal)) + ' FCFA';
+      const totalStr = Math.round(totalVal).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' FCFA';
       const totalLine = `TOTAL NET: ${totalStr}\n`;
       bufferChunks.push(Buffer.from([0x1B, 0x61, 0x02])); // Alignement droite
       bufferChunks.push(Buffer.from([0x1B, 0x45, 0x01])); // Gras
@@ -618,8 +618,11 @@ function imprimerTicketRaw(data, printerName = 'XP-80C') {
     bufferChunks.push(Buffer.from('------------------------------------------------\n', 'ascii'));
     bufferChunks.push(Buffer.from('*** MERCI DE VOTRE VISITE ***\n', 'ascii'));
     
-    // 5 sauts de lignes pour dépasser la fente de découpe avant la coupe automatique du driver
+    // 5 sauts de lignes pour dépasser la fente de découpe
     bufferChunks.push(Buffer.from('\n\n\n\n\n', 'ascii'));
+
+    // Commande de coupure automatique ESC/POS : GS V 66 0 (coupe partielle avec avance)
+    bufferChunks.push(Buffer.from([0x1D, 0x56, 0x42, 0x00]));
 
     const finalBuffer = Buffer.concat(bufferChunks);
 
