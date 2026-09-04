@@ -153,4 +153,22 @@ SKYSTORE/
 - **Sauvegarde manuelle** : Menu latéral ➔ *Sauvegarder BD* (Export `.sqlite` horodaté via boîte de dialogue native).
 
 ---
+
+## 🚀 6. Publication des Mises à Jour (GitHub Release & Auto-Updater)
+
+- **Fichier de configuration** : [`package.json`](file:///package.json#L22-L29)
+- **Procédure de publication** :
+  1. Incrémenter le numéro de version dans `package.json` (ex: `"version": "1.1.7"`).
+  2. Définir votre jeton d'accès GitHub dans PowerShell :
+     ```powershell
+     $env:GH_TOKEN="ghp_VOTRE_TOKEN_GITHUB"
+     ```
+  3. Lancer la publication automatique :
+     ```powershell
+     npm run electron:publish
+     ```
+  4. *Résultat* : `electron-builder` compile l'exécutable `.exe`, génère le manifeste de mise à jour **`latest.yml`**, et téléverse le tout sur **GitHub Releases**.
+  5. Si la release est en **Draft (Brouillon)** sur GitHub, aller sur le dépôt ➔ *Releases* ➔ *Edit* ➔ **Publish release**.
+
+---
 *Document généré pour le projet SKYSTORE POS.*

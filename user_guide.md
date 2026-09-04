@@ -104,11 +104,15 @@ Pour automatiser la sauvegarde quotidienne sans intervention :
 * Vous pouvez installer **Google Drive for Desktop** ou **OneDrive** sur l'ordinateur.
 * Choisissez le dossier de synchronisation de Google Drive / OneDrive lors du clic sur le bouton **Sauvegarder BD**.
 
-### 5. 📦 Génération du Fichier d'Installation (.EXE)
-Pour créer l'installateur Windows autonome pour le magasin :
-1. Ouvrez un terminal dans le dossier du projet.
-2. Exécutez la commande :
-   ```bash
-   npm run electron:build
+### 5. 📦 Génération du Fichier d'Installation (.EXE) & Publication en Ligne
+Pour créer l'installateur Windows et le publier sur GitHub Releases pour l'auto-updater :
+1. Ouvrez un terminal PowerShell dans le dossier du projet.
+2. Définissez votre jeton GitHub :
+   ```powershell
+   $env:GH_TOKEN="votre_token_github"
    ```
-3. L'installateur `.exe` sera généré dans le dossier `dist/`.
+3. Exécutez la commande :
+   ```powershell
+   npm run electron:publish
+   ```
+4. L'installateur `.exe` et le fichier `latest.yml` seront téléversés automatiquement sur votre page GitHub Releases.
