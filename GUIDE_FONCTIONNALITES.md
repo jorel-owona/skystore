@@ -129,6 +129,14 @@ SKYSTORE/
 - **Fonctionnement** :
   - Historique immuable de toutes les actions sensibles (ventes, annulations, ouvertures/fermetures de session, dépenses, réajustements de stock).
 
+### ⚙️ I. Module Paramètres, Mises à Jour & Contrôle à Distance (Anti-Impayés)
+- **Fichier** : [`src/tabs/Parametres.jsx`](file:///src/tabs/Parametres.jsx), [`electron/main.js`](file:///electron/main.js#L413)
+- **Fonctionnement** :
+  - **Mises à Jour en Direct** : Bouton *"Vérifier les mises à jour"* déclenchant une vérification instantanée IPC sur GitHub Releases, avec barre de progression du téléchargement et redémarrage automatique.
+  - **Internationalisation (i18n)** : Sélecteur de langues (Français, English, Español, العربية, Português, 中文, Deutsch).
+  - **Contrôle à Distance & Gestion des Licences** : Vérification en ligne du statut d'abonnement du client (`ACTIVE`, `EXPIRED`, `BLOCKED`) via un fichier JSON distant (`license.json`). Permet de verrouiller à distance l'accès du logiciel en cas d'impayé, avec possibilité d'activer un code Master hors-ligne par l'Admin.
+  - **Matériel** : Sélection de l'imprimante thermique par défaut, activation/désactivation de l'ouverture du tiroir-caisse et bips sonores scanner.
+
 ---
 
 ## 🖨️ 4. Système d'Impression Thermique (ESC/POS)
