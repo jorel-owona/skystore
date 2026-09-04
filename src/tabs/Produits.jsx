@@ -43,6 +43,7 @@ export default function Produits() {
   const [formData, setFormData] = useState({
     id: null,
     nom: '',
+    code_barre: '',
     description: '',
     photo_path: '',
     prix_achat: '',
@@ -115,6 +116,7 @@ export default function Produits() {
       setFormData({
         id: produit.id,
         nom: produit.nom,
+        code_barre: produit.code_barre || '',
         description: produit.description || '',
         photo_path: produit.photo_path || '',
         prix_achat: produit.prix_achat,
@@ -123,7 +125,7 @@ export default function Produits() {
       });
     } else {
       setIsEditing(false);
-      setFormData({ id: null, nom: '', description: '', photo_path: '', prix_achat: '', prix_vente: '', quantite_stock: '' });
+      setFormData({ id: null, nom: '', code_barre: '', description: '', photo_path: '', prix_achat: '', prix_vente: '', quantite_stock: '' });
     }
     setShowModal(true);
   };
@@ -144,10 +146,9 @@ export default function Produits() {
       const now = new Date().toLocaleString('fr-FR');
       if (isEditing) {
         await query(
-          'UPDATE produits SET nom = ?, description = ?, photo_path = ?, prix_achat = ?, prix_vente = ?, quantite_stock = ? WHERE id = ?',
-          [formData.nom, formData.description, formData.photo_path, parseFloat(formData.prix_achat), parseFloat(formData.prix_vente), parseInt(formData.quantite_stock, 10), formData.id]
+          'UPDATE produits SET nom = ?, code_barre = ?, description = ?, photo_path = ?, prix_achat = ?, prix_vente = ?, quantite_stock = ? WHERE id = ?',
+          [formData.nom, formData.code_barre, formData.description, formData.photo_path, parseFloat(formData.prix_achat), parseFloat(formData.prix_vente), parseInt(formData.quantite_stock, 10), formData.id]
         );
-        // Log PRICE_CHANGE
         const fullData = JSON.stringify({
           produit: formData.nom,
           nouveauPrixAchat: `${formData.prix_achat} FCFA`,
@@ -160,10 +161,9 @@ export default function Produits() {
         );
       } else {
         await query(
-          'INSERT INTO produits (nom, description, photo_path, prix_achat, prix_vente, quantite_stock) VALUES (?, ?, ?, ?, ?, ?)',
-          [formData.nom, formData.description, formData.photo_path, parseFloat(formData.prix_achat), parseFloat(formData.prix_vente), parseInt(formData.quantite_stock, 10)]
+          'INSERT INTO produits (nom, code_barre, description, photo_path, prix_achat, prix_vente, quantite_stock) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [formData.nom, formData.code_barre, formData.description, formData.photo_path, parseFloat(formData.prix_achat), parseFloat(formData.prix_vente), parseInt(formData.quantite_stock, 10)]
         );
-        // Log STOCK_IN
         const fullData = JSON.stringify({
           produit: formData.nom,
           quantiteEntree: formData.quantite_stock,
@@ -296,6 +296,12 @@ export default function Produits() {
                 <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">Désignation Produit *</label>
                 <input required type="text" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-slate-800 dark:text-slate-200 outline-none focus:ring-1 focus:ring-blue-500"
                   value={formData.nom} onChange={e => setFormData({...formData, nom: e.target.value})} />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">Code-Barres / EAN (Scannable)</label>
+                <input type="text" placeholder="Ex: 690123456789" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-slate-800 dark:text-slate-200 font-mono outline-none focus:ring-1 focus:ring-blue-500"
+                  value={formData.code_barre} onChange={e => setFormData({...formData, code_barre: e.target.value})} />
               </div>
               
               <div>

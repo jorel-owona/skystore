@@ -15,7 +15,8 @@ const parseDate = (str) => {
   return new Date(year, month - 1, day, hours, minutes, seconds);
 };
 
-export default function Vente({ activeSession, refreshSession }) {
+export default function Vente({ activeSession, refreshSession, addToast, globalShopName }) {
+  const shopName = globalShopName || localStorage.getItem('skystore_shop_name') || 'SKYSTORE';
   const [fondCaisse, setFondCaisse] = useState('');
   const [recetteDuJour, setRecetteDuJour] = useState(0);
   const [impayes, setImpayes] = useState(0);
@@ -143,7 +144,7 @@ export default function Vente({ activeSession, refreshSession }) {
           try {
             const printData = {
               isZReport: true,
-              shopName: 'SKYSTORE',
+              shopName: shopName,
               date: nowStr,
               dateOuverture: activeSession.dateOuverture,
               dateFermeture: nowStr,

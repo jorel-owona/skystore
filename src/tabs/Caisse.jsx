@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, ShoppingCart, UserPlus, Plus, Minus, Trash2, Printer, X, Eye, Check, Edit2, AlertCircle, PenTool } from 'lucide-react';
+import { Search, ShoppingCart, UserPlus, Plus, Minus, Trash2, Printer, X, Eye, Check, Edit2, AlertCircle, PenTool, Camera, MessageSquare, Award } from 'lucide-react';
 import Barcode from '../components/Barcode';
+import BarcodeScannerModal from '../components/BarcodeScannerModal';
 import { playBeep, playSuccess, playError, playCashRegister, playDelete, playClick } from '../utils/sounds';
 import query from '../utils/db';
 
@@ -35,12 +36,13 @@ function ProductImage({ path, alt }) {
   return <img src={src} alt={alt} className="h-full w-full object-cover" />;
 }
 
-export default function Caisse({ clients = [], refreshClients, activeSession }) {
+export default function Caisse({ clients = [], refreshClients, activeSession, currentUser, addToast, globalShopName, globalLogoB64 }) {
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState('');
   const [cart, setCart] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [transactionId, setTransactionId] = useState('');
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   // Client handling
   const [selectedClientId, setSelectedClientId] = useState('passant');
@@ -49,8 +51,10 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
 
   // Preview & Checkout
   const [showPreview, setShowPreview] = useState(false);
-  const [logoPreview, setLogoPreview] = useState(null);
-  const [shopName, setShopName] = useState('SKYSTORE');
+  // Logo : priorité prop globale > localStorage
+  const [logoPreview, setLogoPreview] = useState(() => globalLogoB64 || localStorage.getItem('skystore_logo_custom') || null);
+  // Nom boutique : priorité prop globale > localStorage
+  const [shopName, setShopName] = useState(() => globalShopName || localStorage.getItem('skystore_shop_name') || 'SKYSTORE');
   const [addedToCart, setAddedToCart] = useState(null);
 
   // Editing price
@@ -60,7 +64,16 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
 
   const logoInputRef = useRef();
 
-  const allClients = [{ id: 'passant', nom: 'Client En Passant', telephone: '' }, ...clients];
+  // Sync depuis props globales si elles changent (ex: utilisateur met à jour le nom depuis le modal)
+  useEffect(() => {
+    if (globalShopName) setShopName(globalShopName);
+  }, [globalShopName]);
+
+  useEffect(() => {
+    if (globalLogoB64) setLogoPreview(globalLogoB64);
+  }, [globalLogoB64]);
+
+  const allClients = [{ id: 'passant', nom: 'Client En Passant', telephone: '', points_fidelite: 0 }, ...clients];
 
   const fetchItems = async () => {
     try {
@@ -89,15 +102,69 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
     fetchItems();
   }, []);
 
+  // --- Raccourcis Clavier (F1-F4, F9, Esc) ---
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ignorer si l'utilisateur saisit du texte dans un champ de formulaire
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) && e.key !== 'Escape' && e.key !== 'F9') {
+        return;
+      }
+
+      if (e.key === 'F1') {
+        e.preventDefault();
+        setPaymentMethod('Cash');
+        playClick();
+      } else if (e.key === 'F2') {
+        e.preventDefault();
+        setPaymentMethod('Orange Money');
+        playClick();
+      } else if (e.key === 'F3') {
+        e.preventDefault();
+        setPaymentMethod('Mobile Money');
+        playClick();
+      } else if (e.key === 'F4') {
+        e.preventDefault();
+        setPaymentMethod('Carte');
+        playClick();
+      } else if (e.key === 'F9' || (e.ctrlKey && e.key === 'Enter')) {
+        e.preventDefault();
+        handleCheckout();
+      } else if (e.key === 'Escape') {
+        if (showPreview) {
+          setShowPreview(false);
+        } else if (isScannerOpen) {
+          setIsScannerOpen(false);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [cart, activeSession, showPreview, isScannerOpen]);
+
   const filteredProducts = products.filter(p =>
     p.nom.toLowerCase().includes(search.toLowerCase()) ||
+    (p.code_barre && p.code_barre.toLowerCase().includes(search.toLowerCase())) ||
     (p.categorie_nom && p.categorie_nom.toLowerCase().includes(search.toLowerCase()))
   );
+
+  const handleScanBarcode = (scannedCode) => {
+    const found = products.find(p => p.code_barre === scannedCode || p.nom.toLowerCase() === scannedCode.toLowerCase());
+    if (found) {
+      addToCart(found);
+      playSuccess();
+      if (addToast) addToast('success', 'Produit Scanné', `${found.nom} ajouté au panier`);
+    } else {
+      playError();
+      if (addToast) addToast('error', 'Code-barres Inconnu', `Aucun produit pour : ${scannedCode}`);
+    }
+  };
 
   const addToCart = (product) => {
     if (!activeSession) {
       playError();
-      return alert('La caisse est fermée ! Ouvrez une session dans l\'onglet "Vente & Sessions" pour encaisser.');
+      if (addToast) addToast('warning', 'Caisse Fermée', 'Ouvrez une session dans "Vente & Sessions" pour encaisser.');
+      return;
     }
     playBeep();
     setAddedToCart(`${product.type}-${product.id}`);
@@ -112,7 +179,7 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
           setCart(cart.map(item => item.id === product.id && item.type === 'Produit' ? { ...item, qte: item.qte + 1 } : item));
         } else {
           playError();
-          alert('Stock insuffisant');
+          if (addToast) addToast('warning', 'Stock Insuffisant', `Stock max atteint pour ${product.nom}`);
         }
       }
     } else {
@@ -132,7 +199,7 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
           const newQte = item.qte + delta;
           if (newQte > (product ? product.quantite_stock : 999)) {
             playError();
-            alert('Stock insuffisant');
+            if (addToast) addToast('warning', 'Stock Insuffisant', 'Quantité demandée > stock disponible');
             return item;
           }
           return newQte > 0 ? { ...item, qte: newQte } : item;
@@ -157,6 +224,7 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
   };
 
   const total = cart.reduce((sum, item) => sum + (item.prix_negocie * item.qte), 0);
+  const pointsEarned = Math.floor(total / 1000);
 
   const handleAddNewClient = async () => {
     if (!newClientData.nom || !newClientData.telephone) {
@@ -181,11 +249,13 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
   const handleCheckout = () => {
     if (!activeSession) {
       playError();
-      return alert('La caisse est fermée ! Ouvrez une session dans l\'onglet "Vente & Sessions" pour encaisser.');
+      if (addToast) addToast('warning', 'Caisse Fermée', 'Ouvrez d\'abord une session.');
+      return;
     }
     if (cart.length === 0) {
       playError();
-      return alert('Le panier est vide');
+      if (addToast) addToast('info', 'Panier Vide', 'Ajoutez des articles avant d\'encaisser.');
+      return;
     }
     playClick();
     setShowPreview(true);
@@ -199,13 +269,20 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
       const dbQuery = window.api ? window.api.dbQuery : async () => ({ id: Date.now() });
       const clientId = selectedClientId === 'passant' ? null : selectedClientId;
       const statutPaiement = 'Payé';
+      const vendedorId = currentUser ? currentUser.id : null;
 
       // Create Sale
       const resVente = await dbQuery(
-        'INSERT INTO ventes (client_id, date_vente, moyen_paiement, transaction_id, statut_paiement, total_facture, statut_facture) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [clientId, now, paymentMethod, transactionId, statutPaiement, total, 'Valide']
+        'INSERT INTO ventes (client_id, date_vente, moyen_paiement, transaction_id, statut_paiement, total_facture, statut_facture, vendeur_id, points_gagnes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [clientId, now, paymentMethod, transactionId, statutPaiement, total, 'Valide', vendedorId, pointsEarned]
       );
       const venteId = resVente.id || Date.now();
+
+      // Mise à jour des points de fidélité du client
+      if (clientId && pointsEarned > 0) {
+        await dbQuery('UPDATE clients SET points_fidelite = points_fidelite + ? WHERE id = ?', [pointsEarned, clientId]);
+        if (refreshClients) refreshClients();
+      }
 
       // Create details & Update stock
       for (const item of cart) {
@@ -220,12 +297,12 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
 
       await dbQuery(
         'INSERT INTO journal_audit (date_evenement, type_evenement, details) VALUES (?, ?, ?)',
-        [now, 'STOCK OUT', `Vente effectuée - ${invoiceId} - Montant: ${total} FCFA`]
+        [now, 'STOCK OUT', `Vente effectuée par ${currentUser?.nom || 'Admin'} - ${invoiceId} - Montant: ${total} FCFA`]
       );
 
       playCashRegister();
 
-      // Impression directe brute (ESC/POS) sur l'imprimante configurée (sauvegardée dans localStorage)
+      // Impression directe brute (ESC/POS)
       setTimeout(async () => {
         const selectedPrinter = localStorage.getItem('selected_printer') || 'XP-80C';
         
@@ -235,7 +312,7 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
               shopName: shopName || 'SKYSTORE',
               date: now,
               invoiceId: invoiceId,
-              cashier: 'Admin',
+              cashier: currentUser?.nom || 'Admin',
               clientName: selectedClientInfo.nom,
               paymentMethod: paymentMethod,
               cart: cart,
@@ -266,6 +343,18 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
     }
   };
 
+  const handleSendWhatsApp = () => {
+    if (!selectedClientInfo.telephone) {
+      return alert('Aucun numéro de téléphone rattaché à ce client.');
+    }
+    const articlesList = cart.map(i => `- ${i.qte}x ${i.nom} (${FCFA(i.prix_negocie * i.qte)})`).join('\n');
+    const msg = `Bonjour ${selectedClientInfo.nom},\nMerci pour votre achat chez *${shopName}* (Facture #${invoiceId}).\n\n*Détail de votre panier :*\n${articlesList}\n\n*Total Net :* ${FCFA(total)}\n*Moyen de Paiement :* ${paymentMethod}\n\nÀ bientôt chez ${shopName} !`;
+
+    if (window.api && window.api.openWhatsApp) {
+      window.api.openWhatsApp(selectedClientInfo.telephone, msg);
+    }
+  };
+
   const handleLogoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -289,7 +378,7 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
 
       <div className="flex h-full gap-6">
         {/* Zone produits */}
-        <div className="flex-1 flex flex-col h-full glass-card p-5 shadow-sm">
+        <div className="flex-1 flex flex-col h-full liquid-card p-5">
           <div className="flex items-center gap-3 mb-4">
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -301,6 +390,16 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
+
+            {/* Bouton Scanner Webcam */}
+            <button
+              onClick={() => { playClick(); setIsScannerOpen(true); }}
+              className="px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs font-bold transition flex items-center space-x-2 shadow-md shadow-blue-500/20"
+              title="Scanner par Webcam"
+            >
+              <Camera size={18} />
+              <span className="hidden sm:inline">Webcam</span>
+            </button>
           </div>
 
           <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar">
@@ -349,7 +448,7 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
         </div>
 
         {/* Zone panier */}
-        <div className="w-[380px] flex flex-col glass-card shadow-lg overflow-hidden border border-slate-200 dark:border-slate-700">
+        <div className="w-[380px] flex flex-col liquid-card shadow-lg overflow-hidden">
           <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-white/40 dark:bg-slate-900/40 flex items-center justify-between backdrop-blur-md">
             <h2 className="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center">
               <ShoppingCart className="mr-2 text-blue-500" size={18} /> Panier
@@ -366,6 +465,11 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
               <div className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 space-y-3">
                 <ShoppingCart size={36} className="opacity-40" />
                 <p className="text-xs font-medium">Le panier est vide</p>
+                <div className="text-[10px] text-slate-400 text-center space-y-1 mt-2 bg-slate-100 dark:bg-slate-800/40 p-3 rounded-2xl">
+                  <p><span className="font-bold">F1-F4</span> : Sélection Paiement</p>
+                  <p><span className="font-bold">F9</span> : Encaisser</p>
+                  <p><span className="font-bold">Esc</span> : Annuler</p>
+                </div>
               </div>
             ) : cart.map(item => (
               <div key={`${item.type}-${item.id}`} className="flex flex-col bg-white dark:bg-slate-800/80 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:shadow-md">
@@ -428,7 +532,11 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
                     value={selectedClientId}
                     onChange={(e) => setSelectedClientId(e.target.value)}
                   >
-                    {allClients.map(c => <option key={c.id} value={c.id}>{c.nom} {c.telephone ? `- ${c.telephone}` : ''}</option>)}
+                    {allClients.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.nom} {c.telephone ? `- ${c.telephone}` : ''} {c.points_fidelite > 0 ? `⭐ (${c.points_fidelite} pts)` : ''}
+                      </option>
+                    ))}
                   </select>
                   <button
                     onClick={() => { playClick(); setShowNewClientForm(true); }}
@@ -476,10 +584,10 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value)}
               >
-                <option value="Cash">💵 Espèces</option>
-                <option value="Orange Money">🟠 Orange Money</option>
-                <option value="Mobile Money">📱 Mobile Money</option>
-                <option value="Carte">💳 Carte Bleue</option>
+                <option value="Cash">💵 [F1] Espèces</option>
+                <option value="Orange Money">🟠 [F2] Orange Money</option>
+                <option value="Mobile Money">📱 [F3] Mobile Money</option>
+                <option value="Carte">💳 [F4] Carte Bleue</option>
               </select>
 
               {paymentMethod !== 'Cash' && (
@@ -492,6 +600,17 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
                 />
               )}
             </div>
+
+            {/* Points de fidélité gagnés */}
+            {pointsEarned > 0 && selectedClientId !== 'passant' && (
+              <div className="flex items-center justify-between text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20">
+                <span className="flex items-center space-x-1">
+                  <Award size={14} />
+                  <span>Fidélité attribuée :</span>
+                </span>
+                <span className="font-extrabold">+{pointsEarned} pts</span>
+              </div>
+            )}
 
             {/* Settings Ticket Rapide */}
             <div className="flex items-center gap-2 pt-2 border-t border-slate-200 dark:border-slate-700/50">
@@ -506,7 +625,10 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
                 placeholder="Nom Boutique"
                 className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2 py-1.5 text-[10px] font-bold text-slate-800 dark:text-slate-200 shadow-sm"
                 value={shopName}
-                onChange={(e) => setShopName(e.target.value)}
+                onChange={(e) => {
+                  setShopName(e.target.value);
+                  localStorage.setItem('skystore_shop_name', e.target.value);
+                }}
               />
               <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
             </div>
@@ -527,7 +649,7 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
                 }`}
             >
               <Printer size={18} />
-              <span>Aperçu & Encaisser</span>
+              <span>Aperçu & Encaisser [F9]</span>
             </button>
           </div>
         </div>
@@ -564,7 +686,7 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Caissier:</span>
-                    <span className="font-bold">Admin</span>
+                    <span className="font-bold">{currentUser?.nom || 'Admin'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Client:</span>
@@ -619,7 +741,17 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
               </div>
             </div>
 
-            <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex gap-3 bg-white dark:bg-slate-900 no-print">
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex gap-2 bg-white dark:bg-slate-900 no-print">
+              {selectedClientInfo.telephone && (
+                <button
+                  onClick={handleSendWhatsApp}
+                  className="p-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 rounded-xl font-bold text-xs transition-colors flex items-center justify-center gap-1"
+                  title="Partager par WhatsApp"
+                >
+                  <MessageSquare size={16} />
+                  <span>WhatsApp</span>
+                </button>
+              )}
               <button
                 onClick={() => { playClick(); setShowPreview(false); }}
                 className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs transition-colors"
@@ -631,12 +763,19 @@ export default function Caisse({ clients = [], refreshClients, activeSession }) 
                 className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-blue-500/30 flex items-center justify-center gap-1.5 transition-all hover:scale-[1.01] active:scale-[0.99]"
               >
                 <Check size={16} strokeWidth={3} />
-                Valider & Imprimer
+                Valider
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Modal Scanner Code-Barres Webcam */}
+      <BarcodeScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScan={handleScanBarcode}
+      />
     </div>
   );
 }

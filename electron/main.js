@@ -638,3 +638,36 @@ function imprimerTicketRaw(data, printerName = 'XP-80C') {
 ipcMain.handle('print:ticket-raw', async (event, data, printerName) => {
   return await imprimerTicketRaw(data, printerName);
 });
+
+// --- Ouverture Externe de WhatsApp ---
+ipcMain.handle('system:open-whatsapp', async (event, phone, message) => {
+  const { shell } = require('electron');
+  const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+  const encodedMsg = encodeURIComponent(message || '');
+  const url = `https://wa.me/${cleanPhone}?text=${encodedMsg}`;
+  await shell.openExternal(url);
+  return true;
+});
+
+// --- Sauvegarde / Backup de la base de données ---
+ipcMain.handle('system:backup-db', async () => {
+  try {
+    const userDataPath = app.getPath('userData');
+    const dbPath = path.join(userDataPath, 'skystore.sqlite');
+    
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: 'Sauvegarder la base de données SKYSTORE',
+      defaultPath: `skystore_backup_${new Date().toISOString().slice(0,10)}.sqlite`,
+      filters: [{ name: 'SQLite Database', extensions: ['sqlite', 'db'] }]
+    });
+
+    if (!result.canceled && result.filePath) {
+      fs.copyFileSync(dbPath, result.filePath);
+      return { success: true, path: result.filePath };
+    }
+    return { success: false, canceled: true };
+  } catch (err) {
+    console.error('Erreur backup:', err);
+    return { success: false, error: err.message };
+  }
+});

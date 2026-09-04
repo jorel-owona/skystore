@@ -1,7 +1,7 @@
 {
   "name": "skystore",
   "private": true,
-  "version": "1.1.6",
+  "version": "1.1.7",
   "description": "Système de caisse et de gestion pour SKYSTORE",
   "main": "electron/main.js",
   "scripts": {
@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "electron:start": "electron .",
     "electron:build": "vite build && electron-builder --publish never",
-    "electron:publish": "set GH_TOKEN=ghp_LYK4aP4rN4X3H4KI46XzAfyxHi6uuX2dM8pB && vite build && electron-builder --publish always",
+    "electron:publish": "vite build && electron-builder --publish always",
     "make-icon": "node scripts/make-ico.js"
   },
   "build": {
@@ -72,15 +72,18 @@
     ]
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.10.0",
     "clsx": "^2.1.1",
     "electron-updater": "^6.8.3",
     "exceljs": "^4.4.0",
+    "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.400.0",
     "react": "^18.3.1",
     "react-barcode": "^1.6.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.24.0",
+    "recharts": "^3.10.1",
     "tailwind-merge": "^2.3.0"
   },
   "devDependencies": {

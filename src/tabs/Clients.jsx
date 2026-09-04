@@ -134,6 +134,7 @@ export default function Clients({ refreshClients }) {
               <tr className="bg-slate-100 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">
                 <th className="p-4 font-bold border-b border-slate-200 dark:border-slate-700/50">Nom</th>
                 <th className="p-4 font-bold border-b border-slate-200 dark:border-slate-700/50">Téléphone</th>
+                <th className="p-4 font-bold border-b border-slate-200 dark:border-slate-700/50">Points Fidélité</th>
                 <th className="p-4 font-bold border-b border-slate-200 dark:border-slate-700/50">Dette Actuelle</th>
                 <th className="p-4 font-bold border-b border-slate-200 dark:border-slate-700/50 text-center">Actions</th>
               </tr>
@@ -141,14 +142,26 @@ export default function Clients({ refreshClients }) {
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50 text-slate-700 dark:text-slate-300 text-sm">
               {filteredClients.length === 0 ? (
                 <tr>
-                  <td colSpan="4" className="p-8 text-center text-slate-500">Aucun client trouvé.</td>
+                  <td colSpan="5" className="p-8 text-center text-slate-500">Aucun client trouvé.</td>
                 </tr>
               ) : filteredClients.map((c) => (
                 <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                   <td className="p-4 font-semibold">{c.nom}</td>
                   <td className="p-4">{c.telephone}</td>
+                  <td className="p-4 font-bold text-amber-500 flex items-center space-x-1">
+                    <span>⭐ {c.points_fidelite || 0} pts</span>
+                  </td>
                   <td className="p-4 font-bold text-rose-600 dark:text-rose-400">{FCFA(c.dette_actuelle || 0)}</td>
                   <td className="p-4 flex justify-center gap-2">
+                    {c.telephone && (
+                      <button
+                        onClick={() => window.api?.openWhatsApp && window.api.openWhatsApp(c.telephone, `Bonjour ${c.nom}, merci pour votre fidélité chez SKYSTORE !`)}
+                        className="p-2 text-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-lg transition-colors"
+                        title="Contacter sur WhatsApp"
+                      >
+                        📱
+                      </button>
+                    )}
                     <button onClick={() => handleOpenModal(c)} className="p-2 text-slate-400 hover:text-orange-500 bg-slate-100 hover:bg-orange-100 dark:bg-slate-800 dark:hover:bg-orange-500/20 rounded-lg transition-colors">
                       <Edit2 size={16} />
                     </button>

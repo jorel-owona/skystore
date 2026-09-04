@@ -89,23 +89,55 @@ function initDB(dbPath) {
       full_data TEXT
   )`);
 
-  // Migration automatique : ajoute full_data si l'utilisateur a une ancienne BD
-  try {
-    db.exec(`ALTER TABLE journal_audit ADD COLUMN full_data TEXT`);
-  } catch (err) {
-    // Si la colonne existe déjà, better-sqlite3 lèvera une erreur, on l'ignore proprement
-  }
+  db.exec(`CREATE TABLE IF NOT EXISTS utilisateurs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nom TEXT NOT NULL,
+      role TEXT CHECK(role IN ('ADMIN', 'GERANT', 'CAISSIER')) NOT NULL DEFAULT 'CAISSIER',
+      pin_code TEXT NOT NULL,
+      actif INTEGER DEFAULT 1
+  )`);
 
-  // Migrations pour la table ventes
+  db.exec(`CREATE TABLE IF NOT EXISTS sav_tickets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      client_id INTEGER,
+      client_nom TEXT NOT NULL,
+      telephone TEXT,
+      article_nom TEXT NOT NULL,
+      numero_serie TEXT,
+      description_panne TEXT NOT NULL,
+      statut TEXT CHECK(statut IN ('Reçu', 'En Diagnostic', 'En Réparation', 'Prêt', 'Livré')) NOT NULL DEFAULT 'Reçu',
+      cout_estime REAL DEFAULT 0,
+      date_reception TEXT NOT NULL,
+      date_livraison_prevue TEXT,
+      notes TEXT,
+      FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE SET NULL
+  )`);
+
+  // --- Migrations automatiques ---
+  try { db.exec(`ALTER TABLE journal_audit ADD COLUMN full_data TEXT`); } catch (err) {}
+  try { db.exec(`ALTER TABLE ventes ADD COLUMN moyen_paiement TEXT CHECK(moyen_paiement IN ('Cash', 'Orange Money', 'Mobile Money', 'Carte')) NOT NULL DEFAULT 'Cash'`); } catch (err) {}
+  try { db.exec(`ALTER TABLE ventes ADD COLUMN transaction_id TEXT`); } catch (err) {}
+  try { db.exec(`ALTER TABLE ventes ADD COLUMN statut_paiement TEXT CHECK(statut_paiement IN ('Payé', 'Impayé')) NOT NULL DEFAULT 'Payé'`); } catch (err) {}
+  try { db.exec(`ALTER TABLE ventes ADD COLUMN vendeur_id INTEGER`); } catch (err) {}
+  try { db.exec(`ALTER TABLE ventes ADD COLUMN points_gagnes INTEGER DEFAULT 0`); } catch (err) {}
+  try { db.exec(`ALTER TABLE ventes ADD COLUMN remise_appliquee REAL DEFAULT 0`); } catch (err) {}
+
+  try { db.exec(`ALTER TABLE produits ADD COLUMN code_barre TEXT`); } catch (err) {}
+  try { db.exec(`ALTER TABLE produits ADD COLUMN seuil_alerte INTEGER DEFAULT 5`); } catch (err) {}
+
+  try { db.exec(`ALTER TABLE clients ADD COLUMN points_fidelite INTEGER DEFAULT 0`); } catch (err) {}
+  try { db.exec(`ALTER TABLE clients ADD COLUMN email TEXT`); } catch (err) {}
+
+  // Utilisateur administrateur par défaut si aucun utilisateur n'existe
   try {
-    db.exec(`ALTER TABLE ventes ADD COLUMN moyen_paiement TEXT CHECK(moyen_paiement IN ('Cash', 'Orange Money', 'Mobile Money', 'Carte')) NOT NULL DEFAULT 'Cash'`);
-  } catch (err) {}
-  try {
-    db.exec(`ALTER TABLE ventes ADD COLUMN transaction_id TEXT`);
-  } catch (err) {}
-  try {
-    db.exec(`ALTER TABLE ventes ADD COLUMN statut_paiement TEXT CHECK(statut_paiement IN ('Payé', 'Impayé')) NOT NULL DEFAULT 'Payé'`);
-  } catch (err) {}
+    const userCount = db.prepare('SELECT COUNT(*) as count FROM utilisateurs').get();
+    if (userCount.count === 0) {
+      db.prepare('INSERT INTO utilisateurs (nom, role, pin_code) VALUES (?, ?, ?)').run('Administrateur', 'ADMIN', '0000');
+      db.prepare('INSERT INTO utilisateurs (nom, role, pin_code) VALUES (?, ?, ?)').run('Caissier Principal', 'CAISSIER', '1234');
+    }
+  } catch (err) {
+    console.error('[DB Init Users]', err);
+  }
 
   return db;
 }

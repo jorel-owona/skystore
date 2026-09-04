@@ -7,5 +7,7 @@ contextBridge.exposeInMainWorld('api', {
   readImage: (filePath) => ipcRenderer.invoke('file:readImage', filePath),
   getPrinters: () => ipcRenderer.invoke('print:get-printers'),
   printSilent: (printerName) => ipcRenderer.invoke('print:silent', printerName),
-  printTicketRaw: (data, printerName) => ipcRenderer.invoke('print:ticket-raw', data, printerName)
+  printTicketRaw: (data, printerName) => ipcRenderer.invoke('print:ticket-raw', data, printerName),
+  openWhatsApp: (phone, message) => ipcRenderer.invoke('system:open-whatsapp', phone, message),
+  backupDatabase: () => ipcRenderer.invoke('system:backup-db')
 });

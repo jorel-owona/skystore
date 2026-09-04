@@ -5,7 +5,8 @@ import { playClick, playDelete, playSuccess, playError } from '../utils/sounds';
 
 const FCFA = (n) => new Intl.NumberFormat('fr-FR').format(Math.round(n)) + ' FCFA';
 
-export default function Factures({ activeSession }) {
+export default function Factures({ activeSession, addToast, globalShopName, currentUser }) {
+  const shopName = globalShopName || localStorage.getItem('skystore_shop_name') || 'SKYSTORE';
   const [search, setSearch] = useState('');
   const [factures, setFactures] = useState([]);
   const [previewFac, setPreviewFac] = useState(null);
@@ -38,6 +39,10 @@ export default function Factures({ activeSession }) {
 
   // Annulation de facture avec restauration automatique des stocks et audit log
   const handleDelete = async (id) => {
+    if (currentUser?.role !== 'ADMIN') {
+      if (addToast) addToast('error', 'Accès Refusé', 'Seul un Administrateur peut annuler une facture.');
+      return;
+    }
     const factureTarget = factures.find(f => f.id === id);
     if (!factureTarget) return;
 
@@ -230,14 +235,20 @@ export default function Factures({ activeSession }) {
                       >
                         <Printer size={16} />
                       </button>
-                      <button
-                        onClick={() => handleDelete(fac.id)}
-                        className={`p-2 rounded-lg transition-all ${fac.statut_facture === 'Valide' ? 'text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/20' : 'text-slate-300 dark:text-slate-700 cursor-not-allowed'}`}
-                        disabled={fac.statut_facture !== 'Valide'}
-                        title={fac.statut_facture === 'Valide' ? "Annuler la facture" : "Facture déjà annulée"}
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {currentUser?.role === 'ADMIN' ? (
+                        <button
+                          onClick={() => handleDelete(fac.id)}
+                          className={`p-2 rounded-lg transition-all ${fac.statut_facture === 'Valide' ? 'text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/20' : 'text-slate-300 dark:text-slate-700 cursor-not-allowed'}`}
+                          disabled={fac.statut_facture !== 'Valide'}
+                          title={fac.statut_facture === 'Valide' ? "Annuler la facture" : "Facture déjà annulée"}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      ) : (
+                        <span className="p-2 text-slate-300 dark:text-slate-700 opacity-40 cursor-not-allowed" title="Annulation réservée à l'administrateur">
+                          <Trash2 size={16} />
+                        </span>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -264,7 +275,7 @@ export default function Factures({ activeSession }) {
                 <div className="absolute top-0 left-0 right-0 h-2 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCI+PHBvbHlnb24gcG9pbnRzPSIwLDAgNSwxMCAxMCwwIiBmaWxsPSIjZjFmNWY5Ii8+PC9zdmc+')] -mt-1"></div>
 
                 <div className="text-center mb-5">
-                  <div className="text-2xl font-black uppercase tracking-widest">SKYSTORE</div>
+                  <div className="text-2xl font-black uppercase tracking-widest">{shopName}</div>
                   <div className="text-xs text-gray-500 mt-1">Duplicata Ticket de Caisse</div>
                   <div className="text-xs text-gray-500 mt-1">{previewFac.date_vente}</div>
                   <div className="border-t-2 border-dashed border-gray-300 my-4" />
@@ -330,8 +341,22 @@ export default function Factures({ activeSession }) {
               </div>
             </div>
 
-            <div className="p-5 border-t border-slate-200 dark:border-slate-800 flex gap-4 bg-white dark:bg-slate-900 no-print">
+            <div className="p-5 border-t border-slate-200 dark:border-slate-800 flex gap-2 bg-white dark:bg-slate-900 no-print">
               <button onClick={() => setPreviewFac(null)} className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold transition-colors">Fermer</button>
+              <button
+                onClick={() => {
+                  const clientTel = previewFac.telephone || '';
+                  const articlesList = previewArticles.map(i => `- ${i.quantite}x ${i.nom || 'Article'} (${FCFA(i.prix_unitaire_vendu * i.quantite)})`).join('\n');
+                  const msg = `Bonjour ${previewFac.client_nom || 'Client'},\nVoici le récapitulatif de votre facture #INV-${previewFac.id} du ${previewFac.date_vente} chez SKYSTORE.\n\n*Articles :*\n${articlesList}\n\n*Total Net :* ${FCFA(previewFac.total_facture)}\n*Moyen de Paiement :* ${previewFac.moyen_paiement}`;
+                  if (window.api && window.api.openWhatsApp) {
+                    window.api.openWhatsApp(clientTel, msg);
+                  }
+                }}
+                className="py-3.5 px-4 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 rounded-xl font-bold transition-colors flex items-center justify-center gap-1.5"
+                title="Partager par WhatsApp"
+              >
+                <span>📱 WhatsApp</span>
+              </button>
               {activeSession ? (
                 <button
                   onClick={async () => {
@@ -341,7 +366,7 @@ export default function Factures({ activeSession }) {
                     if (window.api && window.api.printTicketRaw) {
                       try {
                         const printData = {
-                          shopName: 'SKYSTORE',
+                          shopName: shopName,
                           date: previewFac.date_vente,
                           invoiceId: 'INV-' + previewFac.id,
                           cashier: 'Admin',
