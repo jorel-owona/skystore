@@ -17,6 +17,7 @@ import LoginModal from './components/LoginModal';
 import Toast from './components/Toast';
 import { playClick, playSuccess, playError } from './utils/sounds';
 import query from './utils/db';
+import { getTranslation } from './utils/i18n';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('caisse');
@@ -155,6 +156,18 @@ export default function App() {
     return './asset/logo_option1.png';
   };
 
+  const [currentLang, setCurrentLang] = useState(() => localStorage.getItem('skystore_lang') || 'fr');
+
+  useEffect(() => {
+    const handleLangChange = () => {
+      setCurrentLang(localStorage.getItem('skystore_lang') || 'fr');
+    };
+    window.addEventListener('skystore_lang_changed', handleLangChange);
+    return () => window.removeEventListener('skystore_lang_changed', handleLangChange);
+  }, []);
+
+  const t = (key) => getTranslation(key, currentLang);
+
   // Définition des droits par rôle
   const ROLE_TABS = {
     CAISSIER: ['caisse', 'sav', 'clients', 'factures'],
@@ -165,18 +178,18 @@ export default function App() {
   const allowedTabs = ROLE_TABS[currentUser?.role] || ROLE_TABS.CAISSIER;
 
   const navItems = [
-    { id: 'caisse',    icon: ShoppingCart,   label: 'Caisse (POS)' },
-    { id: 'analytics', icon: PieChart,        label: 'Analytics & Marges' },
-    { id: 'sav',       icon: Wrench,          label: 'S.A.V & Réparations' },
-    { id: 'vente',     icon: LayoutDashboard, label: 'Vente & Sessions' },
-    { id: 'journal',   icon: ClipboardList,   label: "Journal d'Audit" },
-    { id: 'inventaire',icon: Box,             label: 'Inventaire' },
-    { id: 'depenses',  icon: Receipt,         label: 'Dépenses' },
-    { id: 'factures',  icon: Receipt,         label: 'Factures' },
-    { id: 'produits',  icon: Package,         label: 'Produits' },
-    { id: 'services',  icon: PenTool,         label: 'Services' },
-    { id: 'clients',   icon: Users,           label: 'Clients' },
-    { id: 'parametres',icon: Settings,        label: 'Paramètres' },
+    { id: 'caisse',    icon: ShoppingCart,   label: t('caisse') },
+    { id: 'analytics', icon: PieChart,        label: t('analytics') },
+    { id: 'sav',       icon: Wrench,          label: t('sav') },
+    { id: 'vente',     icon: LayoutDashboard, label: t('vente') },
+    { id: 'journal',   icon: ClipboardList,   label: t('journal') },
+    { id: 'inventaire',icon: Box,             label: t('inventaire') },
+    { id: 'depenses',  icon: Receipt,         label: t('depenses') },
+    { id: 'factures',  icon: Receipt,         label: t('factures') },
+    { id: 'produits',  icon: Package,         label: t('produits') },
+    { id: 'services',  icon: PenTool,         label: t('services') },
+    { id: 'clients',   icon: Users,           label: t('clients') },
+    { id: 'parametres',icon: Settings,        label: t('parametres') },
   ].filter(item => allowedTabs.includes(item.id));
 
   // Si l'onglet actif n'est plus autorisé après changement d'utilisateur, revenir à la caisse
@@ -254,7 +267,7 @@ export default function App() {
               className="w-full py-2 px-3 bg-white/40 dark:bg-slate-800/40 hover:bg-white/60 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 border border-white/50 dark:border-slate-700"
             >
               <Store size={14} className="text-cyan-500" />
-              <span>Paramètres Boutique</span>
+              <span>{t('shopSettings')}</span>
             </button>
           )}
 
@@ -264,13 +277,13 @@ export default function App() {
               className="w-full py-2 px-3 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 border border-blue-500/20 shadow-sm"
             >
               <Database size={14} />
-              <span>Sauvegarder BD</span>
+              <span>{t('saveDb')}</span>
             </button>
           )}
 
           <div className="text-[10px] text-slate-500 text-center flex flex-col space-y-0.5">
              <span>Version {packageJson.version} Liquid 3D</span>
-             <span className="text-emerald-500 font-bold">• Base SQLite Connectée</span>
+             <span className="text-emerald-500 font-bold">• {t('connected')}</span>
           </div>
         </div>
       </aside>
