@@ -382,23 +382,62 @@ ipcMain.handle('file:readImage', async (event, filePath) => {
   }
 });
 
+// --- Broadcast status helper ---
+function sendUpdaterStatus(status, data = {}) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('updater:status', { status, ...data });
+  }
+}
+
+// --- IPC Handlers Auto-Updater & Licence ---
+ipcMain.handle('app:version', () => {
+  return app.getVersion();
+});
+
+ipcMain.handle('updater:check', async () => {
+  try {
+    sendUpdaterStatus('checking');
+    const result = await autoUpdater.checkForUpdates();
+    return { success: true, version: result?.updateInfo?.version || null };
+  } catch (err) {
+    console.error('Erreur manuel check updater:', err);
+    sendUpdaterStatus('error', { error: err.message });
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('updater:install', () => {
+  autoUpdater.quitAndInstall();
+});
+
 // --- Gestion des événements de l'Auto-Updater ---
 autoUpdater.on('checking-for-update', () => {
   console.log('Vérification des mises à jour en cours...');
+  sendUpdaterStatus('checking');
 });
 autoUpdater.on('update-available', (info) => {
   console.log('Mise à jour disponible:', info.version);
+  sendUpdaterStatus('available', { version: info.version, releaseNotes: info.releaseNotes });
 });
 autoUpdater.on('update-not-available', (info) => {
   console.log('Aucune mise à jour disponible.');
+  sendUpdaterStatus('not-available', { version: info.version });
 });
 autoUpdater.on('error', (err) => {
   console.error('Erreur lors de la vérification de mise à jour:', err);
+  sendUpdaterStatus('error', { error: err.message || 'Erreur lors de la vérification' });
 });
 autoUpdater.on('download-progress', (progressObj) => {
   console.log(`Téléchargement: ${progressObj.percent.toFixed(2)}%`);
+  sendUpdaterStatus('downloading', {
+    percent: progressObj.percent,
+    bytesPerSecond: progressObj.bytesPerSecond,
+    transferred: progressObj.transferred,
+    total: progressObj.total
+  });
 });
 autoUpdater.on('update-downloaded', (info) => {
+  sendUpdaterStatus('downloaded', { version: info.version });
   dialog.showMessageBox({
     type: 'info',
     title: 'Mise à jour prête',
@@ -409,6 +448,38 @@ autoUpdater.on('update-downloaded', (info) => {
       autoUpdater.quitAndInstall();
     }
   });
+});
+
+// --- Gestion du Contrôle à Distance / Licence Anti-Impayé ---
+ipcMain.handle('license:check', async (_event, licenseKey, remoteUrl) => {
+  try {
+    const targetUrl = remoteUrl || 'https://raw.githubusercontent.com/jorel-owona/skystore/main/license.json';
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    
+    const response = await fetch(targetUrl, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      return { success: false, status: 'UNKNOWN', message: 'Serveur de licence inatteignable' };
+    }
+    
+    const data = await response.json();
+    const clientLic = (data.clients && licenseKey && data.clients[licenseKey]) 
+      || data;
+
+    return {
+      success: true,
+      status: clientLic.status || 'ACTIVE',
+      expiryDate: clientLic.expiryDate || '2099-12-31',
+      blocked: Boolean(clientLic.blocked),
+      message: clientLic.message || 'Abonnement valide',
+      clientName: clientLic.clientName || 'Client SKYSTORE POS'
+    };
+  } catch (err) {
+    console.error('Erreur vérification licence distante:', err);
+    return { success: false, status: 'OFFLINE_OK', message: 'Vérification hors ligne (Période de grâce active)' };
+  }
 });
 
 // --- Helper local de spooling brut ---

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import packageJson from '../package.json';
-import { ShoppingCart, ClipboardList, Box, Receipt, Settings, Users, PenTool, LayoutDashboard, Moon, Sun, PieChart, Wrench, Lock, Database, UserCheck, Sparkles, Image as ImageIcon, Store, Upload, Check } from 'lucide-react';
+import { ShoppingCart, ClipboardList, Box, Receipt, Settings, Users, PenTool, LayoutDashboard, Moon, Sun, PieChart, Wrench, Lock, Database, UserCheck, Sparkles, Image as ImageIcon, Store, Upload, Check, Package } from 'lucide-react';
 import Caisse from './tabs/Caisse';
 import Inventaire from './tabs/Inventaire';
 import Vente from './tabs/Vente';
@@ -12,6 +12,7 @@ import Services from './tabs/Services';
 import Clients from './tabs/Clients';
 import Analytics from './tabs/Analytics';
 import Sav from './tabs/Sav';
+import Parametres from './tabs/Parametres';
 import LoginModal from './components/LoginModal';
 import Toast from './components/Toast';
 import { playClick, playSuccess, playError } from './utils/sounds';
@@ -157,8 +158,8 @@ export default function App() {
   // Définition des droits par rôle
   const ROLE_TABS = {
     CAISSIER: ['caisse', 'sav', 'clients', 'factures'],
-    GERANT:   ['caisse', 'sav', 'clients', 'factures', 'vente', 'produits', 'services', 'inventaire', 'depenses'],
-    ADMIN:    ['caisse', 'analytics', 'sav', 'vente', 'journal', 'inventaire', 'depenses', 'factures', 'produits', 'services', 'clients'],
+    GERANT:   ['caisse', 'sav', 'clients', 'factures', 'vente', 'produits', 'services', 'inventaire', 'depenses', 'parametres'],
+    ADMIN:    ['caisse', 'analytics', 'sav', 'vente', 'journal', 'inventaire', 'depenses', 'factures', 'produits', 'services', 'clients', 'parametres'],
   };
 
   const allowedTabs = ROLE_TABS[currentUser?.role] || ROLE_TABS.CAISSIER;
@@ -172,9 +173,10 @@ export default function App() {
     { id: 'inventaire',icon: Box,             label: 'Inventaire' },
     { id: 'depenses',  icon: Receipt,         label: 'Dépenses' },
     { id: 'factures',  icon: Receipt,         label: 'Factures' },
-    { id: 'produits',  icon: Settings,        label: 'Produits' },
+    { id: 'produits',  icon: Package,         label: 'Produits' },
     { id: 'services',  icon: PenTool,         label: 'Services' },
     { id: 'clients',   icon: Users,           label: 'Clients' },
+    { id: 'parametres',icon: Settings,        label: 'Paramètres' },
   ].filter(item => allowedTabs.includes(item.id));
 
   // Si l'onglet actif n'est plus autorisé après changement d'utilisateur, revenir à la caisse
@@ -197,6 +199,7 @@ export default function App() {
       case 'produits':   return <Produits addToast={addToast} />;
       case 'services':   return <Services addToast={addToast} />;
       case 'clients':    return <Clients clients={clients} refreshClients={fetchClients} addToast={addToast} />;
+      case 'parametres': return <Parametres addToast={addToast} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} globalShopName={shopName} setGlobalShopName={setShopName} currentUser={currentUser} />;
       default:           return <Caisse clients={clients} refreshClients={fetchClients} activeSession={activeSession} currentUser={currentUser} addToast={addToast} globalShopName={shopName} globalLogoB64={selectedLogo === 'custom' ? customLogoB64 : null} />;
     }
   };

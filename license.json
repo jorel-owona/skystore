@@ -1,0 +1,15 @@
+{
+  "status": "ACTIVE",
+  "expiryDate": "2099-12-31",
+  "blocked": false,
+  "message": "Votre abonnement SKYSTORE POS est actif et à jour.",
+  "supportPhone": "+237 600 000 000",
+  "clients": {
+    "DEMO_KEY": {
+      "status": "ACTIVE",
+      "expiryDate": "2099-12-31",
+      "blocked": false,
+      "message": "Licence Démo Active"
+    }
+  }
+}

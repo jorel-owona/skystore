@@ -9,5 +9,18 @@ contextBridge.exposeInMainWorld('api', {
   printSilent: (printerName) => ipcRenderer.invoke('print:silent', printerName),
   printTicketRaw: (data, printerName) => ipcRenderer.invoke('print:ticket-raw', data, printerName),
   openWhatsApp: (phone, message) => ipcRenderer.invoke('system:open-whatsapp', phone, message),
-  backupDatabase: () => ipcRenderer.invoke('system:backup-db')
+  backupDatabase: () => ipcRenderer.invoke('system:backup-db'),
+  
+  // Auto-Updater API
+  checkForUpdates: () => ipcRenderer.invoke('updater:check'),
+  quitAndInstall: () => ipcRenderer.invoke('updater:install'),
+  onUpdaterStatus: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('updater:status', handler);
+    return () => ipcRenderer.removeListener('updater:status', handler);
+  },
+  getAppVersion: () => ipcRenderer.invoke('app:version'),
+
+  // Remote License & Subscription API
+  checkRemoteLicense: (licenseKey, remoteUrl) => ipcRenderer.invoke('license:check', licenseKey, remoteUrl)
 });

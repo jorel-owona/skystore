@@ -1,7 +1,7 @@
 {
   "name": "skystore",
   "private": true,
-  "version": "1.1.7",
+  "version": "1.1.8",
   "description": "Système de caisse et de gestion pour SKYSTORE",
   "main": "electron/main.js",
   "scripts": {
